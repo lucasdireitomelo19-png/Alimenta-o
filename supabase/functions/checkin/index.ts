@@ -82,7 +82,8 @@ Deno.serve(async (req) => {
   const { data: employees, error } = await supabase
     .from("employees")
     .select("id, name, descriptor, company_id, companies(name), access_rules(*)")
-    .eq("active", true);
+    .eq("active", true)
+    .is("deleted_at", null);
 
   if (error) {
     return new Response(JSON.stringify({ error: error.message }), { status: 500 });
