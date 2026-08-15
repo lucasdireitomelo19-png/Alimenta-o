@@ -1,65 +1,9 @@
--- Coral — Controle de Acesso — schema Supabase (Postgres)
--- Cole isso em: Supabase Dashboard → SQL Editor → New query → Run
+-- Coral — Controle de Acesso — banco completo pra sustentar todo o menu lateral
+-- Rode isso no SQL Editor do Supabase (depois do schema.sql original + 001_nullable_descriptor.sql)
 
-create table if not exists companies (
-  id bigint generated always as identity primary key,
-  name text not null,
-  deleted_at timestamptz,
-  created_at timestamptz not null default now()
-);
-
-create table if not exists employees (
-  id bigint generated always as identity primary key,
-  company_id bigint not null references companies(id) on delete cascade,
-  name text not null,
-  role text,
-  -- nullable: um funcionário importado via CSV começa sem rosto capturado
-  descriptor float8[],
-  has_face boolean generated always as (descriptor is not null) stored,
-  active boolean not null default true,
-  deleted_at timestamptz,
-  created_at timestamptz not null default now()
-);
-
-create table if not exists access_rules (
-  employee_id bigint primary key references employees(id) on delete cascade,
-  days int[] not null default '{1,2,3,4,5}',
-  cafe_allowed boolean not null default false,
-  cafe_start text not null default '07:00',
-  cafe_end text not null default '09:00',
-  almoco_allowed boolean not null default true,
-  almoco_start text not null default '11:30',
-  almoco_end text not null default '14:00',
-  janta_allowed boolean not null default false,
-  janta_start text not null default '18:00',
-  janta_end text not null default '20:00'
-);
-
-create table if not exists access_logs (
-  id bigint generated always as identity primary key,
-  employee_id bigint references employees(id) on delete set null,
-  employee_name text,
-  company_name text,
-  ts timestamptz not null default now(),
-  granted boolean not null,
-  reason text not null,
-  meal_type text,
-  distance float8
-);
-
--- Cria a regra de acesso padrão automaticamente ao cadastrar um funcionário
-create or replace function create_default_access_rule()
-returns trigger as $$
-begin
-  insert into access_rules (employee_id) values (new.id);
-  return new;
-end;
-$$ language plpgsql;
-
-drop trigger if exists trg_create_default_access_rule on employees;
-create trigger trg_create_default_access_rule
-  after insert on employees
-  for each row execute function create_default_access_rule();
+-- ---------- Lixeira: soft-delete nas tabelas principais ----------
+alter table companies add column if not exists deleted_at timestamptz;
+alter table employees add column if not exists deleted_at timestamptz;
 
 -- ---------- Setores ----------
 create table if not exists sectors (
@@ -165,15 +109,8 @@ create table if not exists audit_log (
 );
 
 -- ---------- Row Level Security ----------
--- Protótipo: painel administrativo ainda não tem login, então libera leitura/escrita
--- em companies/employees/access_rules pra chave "anon". A tabela employees guarda o
--- descriptor (dado biométrico) e por isso é a mais sensível — antes de ir pra produção
--- de verdade, isso precisa ficar atrás de autenticação (Supabase Auth) em vez de aberto
--- pra chave anônima.
-alter table companies enable row level security;
-alter table employees enable row level security;
-alter table access_rules enable row level security;
-alter table access_logs enable row level security;
+-- Mesmo protótipo aberto das outras tabelas — trocar por regras reais quando o
+-- login (Supabase Auth) entrar em produção de verdade.
 alter table sectors enable row level security;
 alter table job_functions enable row level security;
 alter table access_gates enable row level security;
@@ -181,19 +118,6 @@ alter table visitors enable row level security;
 alter table credentials enable row level security;
 alter table app_users enable row level security;
 alter table audit_log enable row level security;
-
-create policy "anon full access - companies" on companies
-  for all using (true) with check (true);
-
-create policy "anon full access - employees" on employees
-  for all using (true) with check (true);
-
-create policy "anon full access - access_rules" on access_rules
-  for all using (true) with check (true);
-
--- access_logs: só a edge function (service role) escreve; leitura liberada pro painel ver o histórico
-create policy "anon read logs" on access_logs
-  for select using (true);
 
 create policy "anon full access - sectors" on sectors for all using (true) with check (true);
 create policy "anon full access - job_functions" on job_functions for all using (true) with check (true);
