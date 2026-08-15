@@ -4,7 +4,36 @@ Protótipo: cadastro de funcionários dos clientes da Coral, regras de dia/horá
 por refeição, e check-in por reconhecimento facial rodando 100% no navegador
 (nenhuma foto sai do dispositivo). Estrutura pronta para acoplar uma catraca real.
 
-## Rodando localmente
+O app fala com o **Supabase** (Postgres + Edge Function) em vez de precisar
+de um servidor próprio — por isso dá pra publicar como site estático em
+qualquer host (Netlify, Vercel, etc.). A pasta `server/` (Express + SQLite)
+continua no repo só como referência para rodar 100% local, sem Supabase.
+
+## Configurando o Supabase (uma vez só)
+
+1. Crie um projeto em [supabase.com](https://supabase.com).
+2. **SQL Editor** → cole o conteúdo de `supabase/schema.sql` → Run.
+3. **Edge Functions** → Deploy a new function → nome `checkin` → cole o
+   conteúdo de `supabase/functions/checkin/index.ts` → Deploy.
+4. **Project Settings → API** → copie a "Project URL" e a chave "anon public".
+5. Em `client/`, copie `.env.example` para `.env` e preencha com esses dois valores.
+
+## Rodando localmente (com Supabase)
+
+```bash
+cd client
+npm install
+npm run dev         # http://localhost:5173
+```
+
+## Publicando (arquivos estáticos)
+
+```bash
+cd client
+npm run build        # gera client/dist — suba essa pasta em qualquer host estático
+```
+
+## Alternativa 100% local (sem Supabase, sem internet)
 
 ```bash
 # Terminal 1 — API

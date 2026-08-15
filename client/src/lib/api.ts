@@ -1,17 +1,4 @@
-const BASE_URL = "http://localhost:4000/api";
-
-async function request<T>(path: string, options?: RequestInit): Promise<T> {
-  const res = await fetch(`${BASE_URL}${path}`, {
-    headers: { "Content-Type": "application/json" },
-    ...options,
-  });
-  if (!res.ok) {
-    const body = await res.json().catch(() => ({}));
-    throw new Error(body.error || `Erro ${res.status}`);
-  }
-  if (res.status === 204) return undefined as T;
-  return res.json();
-}
+import { supabase } from "./supabase";
 
 export interface Company {
   id: number;
@@ -60,20 +47,90 @@ export interface AccessLog {
   distance: number | null;
 }
 
+// deno-lint-ignore no-explicit-any
+type Row = any;
+
+function serializeEmployee(row: Row): Employee {
+  const rules = Array.isArray(row.access_rules) ? row.access_rules[0] : row.access_rules;
+  const company = Array.isArray(row.companies) ? row.companies[0] : row.companies;
+  return {
+    id: row.id,
+    name: row.name,
+    role: row.role,
+    active: row.active,
+    companyId: row.company_id,
+    companyName: company?.name ?? "",
+    rules: {
+      days: rules?.days ?? [1, 2, 3, 4, 5],
+      cafe: { allowed: !!rules?.cafe_allowed, start: rules?.cafe_start ?? "07:00", end: rules?.cafe_end ?? "09:00" },
+      almoco: { allowed: !!rules?.almoco_allowed, start: rules?.almoco_start ?? "11:30", end: rules?.almoco_end ?? "14:00" },
+      janta: { allowed: !!rules?.janta_allowed, start: rules?.janta_start ?? "18:00", end: rules?.janta_end ?? "20:00" },
+    },
+  };
+}
+
+const EMPLOYEE_SELECT = "*, companies(name), access_rules(*)";
+
 export const api = {
-  listCompanies: () => request<Company[]>("/companies"),
-  createCompany: (name: string) =>
-    request<Company>("/companies", { method: "POST", body: JSON.stringify({ name }) }),
+  async listCompanies(): Promise<Company[]> {
+    const { data, error } = await supabase.from("companies").select("*").order("name");
+    if (error) throw new Error(error.message);
+    return data;
+  },
 
-  listEmployees: () => request<Employee[]>("/employees"),
-  createEmployee: (data: { name: string; companyId: number; role?: string; descriptor: number[] }) =>
-    request<Employee>("/employees", { method: "POST", body: JSON.stringify(data) }),
-  updateRules: (id: number, rules: Employee["rules"]) =>
-    request<Employee>(`/employees/${id}/rules`, { method: "PUT", body: JSON.stringify(rules) }),
-  deleteEmployee: (id: number) => request<void>(`/employees/${id}`, { method: "DELETE" }),
+  async createCompany(name: string): Promise<Company> {
+    const { data, error } = await supabase.from("companies").insert({ name }).select().single();
+    if (error) throw new Error(error.message);
+    return data;
+  },
 
-  checkin: (descriptor: number[], gateId = "kiosk-1") =>
-    request<CheckinResult>("/checkin", { method: "POST", body: JSON.stringify({ descriptor, gateId }) }),
+  async listEmployees(): Promise<Employee[]> {
+    const { data, error } = await supabase.from("employees").select(EMPLOYEE_SELECT).order("name");
+    if (error) throw new Error(error.message);
+    return (data ?? []).map(serializeEmployee);
+  },
 
-  listLogs: (limit = 50) => request<AccessLog[]>(`/logs?limit=${limit}`),
+  async createEmployee(input: { name: string; companyId: number; role?: string; descriptor: number[] }): Promise<Employee> {
+    const { data, error } = await supabase
+      .from("employees")
+      .insert({ name: input.name, company_id: input.companyId, role: input.role ?? null, descriptor: input.descriptor })
+      .select(EMPLOYEE_SELECT)
+      .single();
+    if (error) throw new Error(error.message);
+    return serializeEmployee(data);
+  },
+
+  async updateRules(id: number, rules: Employee["rules"]): Promise<Employee> {
+    const { error } = await supabase
+      .from("access_rules")
+      .update({
+        days: rules.days,
+        cafe_allowed: rules.cafe.allowed, cafe_start: rules.cafe.start, cafe_end: rules.cafe.end,
+        almoco_allowed: rules.almoco.allowed, almoco_start: rules.almoco.start, almoco_end: rules.almoco.end,
+        janta_allowed: rules.janta.allowed, janta_start: rules.janta.start, janta_end: rules.janta.end,
+      })
+      .eq("employee_id", id);
+    if (error) throw new Error(error.message);
+
+    const { data, error: fetchError } = await supabase.from("employees").select(EMPLOYEE_SELECT).eq("id", id).single();
+    if (fetchError) throw new Error(fetchError.message);
+    return serializeEmployee(data);
+  },
+
+  async deleteEmployee(id: number): Promise<void> {
+    const { error } = await supabase.from("employees").delete().eq("id", id);
+    if (error) throw new Error(error.message);
+  },
+
+  async checkin(descriptor: number[], gateId = "kiosk-1"): Promise<CheckinResult> {
+    const { data, error } = await supabase.functions.invoke("checkin", { body: { descriptor, gateId } });
+    if (error) throw new Error(error.message);
+    return data;
+  },
+
+  async listLogs(limit = 50): Promise<AccessLog[]> {
+    const { data, error } = await supabase.from("access_logs").select("*").order("ts", { ascending: false }).limit(limit);
+    if (error) throw new Error(error.message);
+    return data;
+  },
 };
