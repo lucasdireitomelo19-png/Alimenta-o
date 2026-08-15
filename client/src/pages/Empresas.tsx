@@ -29,6 +29,12 @@ export default function Empresas() {
     }
   }
 
+  async function remove(id: number) {
+    if (!confirm("Mover esta empresa para a lixeira? Os funcionários dela continuam vinculados a ela.")) return;
+    await api.deleteCompany(id);
+    await refresh();
+  }
+
   return (
     <div>
       <h1 className="page-title">Empresas</h1>
@@ -51,6 +57,7 @@ export default function Empresas() {
               <tr>
                 <th>Empresa</th>
                 <th>Funcionários</th>
+                <th></th>
               </tr>
             </thead>
             <tbody>
@@ -58,6 +65,11 @@ export default function Empresas() {
                 <tr key={c.id}>
                   <td>{c.name}</td>
                   <td>{employees.filter((e) => e.companyId === c.id).length}</td>
+                  <td className="table-actions">
+                    <button className="btn btn-ghost danger" onClick={() => remove(c.id)}>
+                      Remover
+                    </button>
+                  </td>
                 </tr>
               ))}
             </tbody>

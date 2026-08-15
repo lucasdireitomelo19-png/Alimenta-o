@@ -17,9 +17,9 @@ export const NAV: NavSection[] = [
     items: [
       { label: "Empresas", path: "/empresas", ready: true },
       { label: "Funcionários", path: "/funcionarios", ready: true },
-      { label: "Setores", path: "/setores", ready: false },
-      { label: "Funções", path: "/funcoes", ready: false },
-      { label: "Visitantes", path: "/visitantes", ready: false },
+      { label: "Setores", path: "/setores", ready: true },
+      { label: "Funções", path: "/funcoes", ready: true },
+      { label: "Visitantes", path: "/visitantes", ready: true },
     ],
   },
   {
@@ -27,8 +27,8 @@ export const NAV: NavSection[] = [
     items: [
       { label: "Check-in", path: "/kiosk", ready: true, external: true },
       { label: "Refeição", path: "/refeicao", ready: false },
-      { label: "Credenciais", path: "/credenciais", ready: false },
-      { label: "Portões de Acesso", path: "/portoes", ready: false },
+      { label: "Credenciais", path: "/credenciais", ready: true },
+      { label: "Portões de Acesso", path: "/portoes", ready: true },
     ],
   },
   {
@@ -37,8 +37,8 @@ export const NAV: NavSection[] = [
       { label: "Usuários & Permissões", path: "/usuarios", ready: false },
       { label: "Logs do Sistema", path: "/logs", ready: true },
       { label: "Relatórios", path: "/relatorios", ready: false },
-      { label: "Histórico", path: "/historico", ready: false },
-      { label: "Lixeira", path: "/lixeira", ready: false },
+      { label: "Histórico", path: "/historico", ready: true },
+      { label: "Lixeira", path: "/lixeira", ready: true },
     ],
   },
 ];
