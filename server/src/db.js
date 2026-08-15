@@ -16,7 +16,7 @@ db.exec(`
     company_id INTEGER NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
     name TEXT NOT NULL,
     role TEXT,
-    descriptor TEXT NOT NULL,
+    descriptor TEXT,
     active INTEGER NOT NULL DEFAULT 1,
     created_at TEXT NOT NULL DEFAULT (datetime('now'))
   );

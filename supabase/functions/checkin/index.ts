@@ -91,6 +91,7 @@ Deno.serve(async (req) => {
   let best: (typeof employees)[number] | null = null;
   let bestDistance = Infinity;
   for (const emp of employees ?? []) {
+    if (!emp.descriptor) continue; // importado via CSV, ainda sem rosto capturado
     const distance = descriptorDistance(descriptor, emp.descriptor as number[]);
     if (distance < bestDistance) {
       bestDistance = distance;

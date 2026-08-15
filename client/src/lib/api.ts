@@ -16,6 +16,7 @@ export interface Employee {
   name: string;
   role: string | null;
   active: boolean;
+  hasFace: boolean;
   companyId: number;
   companyName: string;
   rules: {
@@ -58,6 +59,7 @@ function serializeEmployee(row: Row): Employee {
     name: row.name,
     role: row.role,
     active: row.active,
+    hasFace: !!row.has_face,
     companyId: row.company_id,
     companyName: company?.name ?? "",
     rules: {
@@ -69,7 +71,9 @@ function serializeEmployee(row: Row): Employee {
   };
 }
 
-const EMPLOYEE_SELECT = "*, companies(name), access_rules(*)";
+// Note: never selects `descriptor` — that's the raw face embedding, it must stay
+// server-side only (used exclusively inside the checkin Edge Function).
+const EMPLOYEE_SELECT = "id, name, role, active, has_face, company_id, companies(name), access_rules(*)";
 
 export const api = {
   async listCompanies(): Promise<Company[]> {
@@ -90,13 +94,21 @@ export const api = {
     return (data ?? []).map(serializeEmployee);
   },
 
-  async createEmployee(input: { name: string; companyId: number; role?: string; descriptor: number[] }): Promise<Employee> {
+  async createEmployee(input: { name: string; companyId: number; role?: string; descriptor?: number[] | null }): Promise<Employee> {
     const { data, error } = await supabase
       .from("employees")
-      .insert({ name: input.name, company_id: input.companyId, role: input.role ?? null, descriptor: input.descriptor })
+      .insert({ name: input.name, company_id: input.companyId, role: input.role ?? null, descriptor: input.descriptor ?? null })
       .select(EMPLOYEE_SELECT)
       .single();
     if (error) throw new Error(error.message);
+    return serializeEmployee(data);
+  },
+
+  async enrollFace(id: number, descriptor: number[]): Promise<Employee> {
+    const { error } = await supabase.from("employees").update({ descriptor }).eq("id", id);
+    if (error) throw new Error(error.message);
+    const { data, error: fetchError } = await supabase.from("employees").select(EMPLOYEE_SELECT).eq("id", id).single();
+    if (fetchError) throw new Error(fetchError.message);
     return serializeEmployee(data);
   },
 

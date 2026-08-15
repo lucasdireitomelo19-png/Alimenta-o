@@ -12,7 +12,9 @@ create table if not exists employees (
   company_id bigint not null references companies(id) on delete cascade,
   name text not null,
   role text,
-  descriptor float8[] not null,
+  -- nullable: um funcionário importado via CSV começa sem rosto capturado
+  descriptor float8[],
+  has_face boolean generated always as (descriptor is not null) stored,
   active boolean not null default true,
   created_at timestamptz not null default now()
 );

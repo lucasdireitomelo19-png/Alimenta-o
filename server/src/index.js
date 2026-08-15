@@ -16,6 +16,7 @@ function serializeEmployee(row) {
     name: row.name,
     role: row.role,
     active: !!row.active,
+    hasFace: !!row.has_face,
     companyId: row.company_id,
     companyName: row.company_name,
     rules: {
@@ -28,7 +29,7 @@ function serializeEmployee(row) {
 }
 
 const employeeWithRulesQuery = `
-  SELECT e.id, e.name, e.role, e.active, e.company_id, c.name AS company_name,
+  SELECT e.id, e.name, e.role, e.active, (e.descriptor IS NOT NULL) AS has_face, e.company_id, c.name AS company_name,
          r.days, r.cafe_allowed, r.cafe_start, r.cafe_end,
          r.almoco_allowed, r.almoco_start, r.almoco_end,
          r.janta_allowed, r.janta_start, r.janta_end
@@ -57,8 +58,11 @@ app.get("/api/employees", (req, res) => {
 
 app.post("/api/employees", (req, res) => {
   const { name, companyId, role, descriptor } = req.body;
-  if (!name || !companyId || !Array.isArray(descriptor) || descriptor.length !== 128) {
-    return res.status(400).json({ error: "name, companyId e descriptor (128 números) são obrigatórios" });
+  if (!name || !companyId) {
+    return res.status(400).json({ error: "name e companyId são obrigatórios" });
+  }
+  if (descriptor !== undefined && descriptor !== null && (!Array.isArray(descriptor) || descriptor.length !== 128)) {
+    return res.status(400).json({ error: "descriptor, quando enviado, precisa ter 128 números" });
   }
   const company = db.prepare("SELECT id FROM companies WHERE id = ?").get(companyId);
   if (!company) return res.status(404).json({ error: "Empresa cliente não encontrada" });
@@ -71,7 +75,7 @@ app.post("/api/employees", (req, res) => {
   );
 
   const tx = db.transaction(() => {
-    const info = insertEmployee.run(companyId, name.trim(), role || null, JSON.stringify(descriptor));
+    const info = insertEmployee.run(companyId, name.trim(), role || null, descriptor ? JSON.stringify(descriptor) : null);
     insertRules.run(info.lastInsertRowid);
     return info.lastInsertRowid;
   });
@@ -106,6 +110,18 @@ app.put("/api/employees/:id/rules", (req, res) => {
   res.json(serializeEmployee(row));
 });
 
+app.put("/api/employees/:id/face", (req, res) => {
+  const { descriptor } = req.body;
+  if (!Array.isArray(descriptor) || descriptor.length !== 128) {
+    return res.status(400).json({ error: "descriptor (128 números) é obrigatório" });
+  }
+  const employee = db.prepare("SELECT id FROM employees WHERE id = ?").get(req.params.id);
+  if (!employee) return res.status(404).json({ error: "Funcionário não encontrado" });
+  db.prepare("UPDATE employees SET descriptor = ? WHERE id = ?").run(JSON.stringify(descriptor), req.params.id);
+  const row = db.prepare(`${employeeWithRulesQuery} WHERE e.id = ?`).get(req.params.id);
+  res.json(serializeEmployee(row));
+});
+
 app.delete("/api/employees/:id", (req, res) => {
   db.prepare("DELETE FROM employees WHERE id = ?").run(req.params.id);
   res.status(204).end();
@@ -123,6 +139,7 @@ app.post("/api/checkin", async (req, res) => {
   let best = null;
   let bestDistance = Infinity;
   for (const row of rows) {
+    if (!row.has_face) continue; // importado via CSV, ainda sem rosto capturado
     const storedDescriptor = JSON.parse(
       db.prepare("SELECT descriptor FROM employees WHERE id = ?").get(row.id).descriptor
     );
