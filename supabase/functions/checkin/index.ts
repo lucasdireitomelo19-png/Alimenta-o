@@ -11,6 +11,15 @@
 
 import { createClient } from "jsr:@supabase/supabase-js@2";
 
+// Sem isso, o navegador bloqueia a chamada antes de chegar aqui (preflight
+// OPTIONS falha) — dá exatamente o erro "failed to send a request to the
+// edge function" no supabase-js, mesmo com a função publicada certinha.
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
+};
+
 const MATCH_THRESHOLD = 0.5;
 const MEALS = [
   { key: "cafe", label: "Café da manhã" },
@@ -65,13 +74,23 @@ async function releasePassage(gateId: string, employeeId: number, mealType: stri
 }
 
 Deno.serve(async (req) => {
+  if (req.method === "OPTIONS") {
+    return new Response(null, { headers: corsHeaders });
+  }
+
   if (req.method !== "POST") {
-    return new Response(JSON.stringify({ error: "Método não permitido" }), { status: 405 });
+    return new Response(JSON.stringify({ error: "Método não permitido" }), {
+      status: 405,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
   }
 
   const { descriptor, gateId = "default" } = await req.json();
   if (!Array.isArray(descriptor) || descriptor.length !== 128) {
-    return new Response(JSON.stringify({ error: "descriptor (128 números) é obrigatório" }), { status: 400 });
+    return new Response(JSON.stringify({ error: "descriptor (128 números) é obrigatório" }), {
+      status: 400,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
   }
 
   const supabase = createClient(
@@ -86,7 +105,10 @@ Deno.serve(async (req) => {
     .is("deleted_at", null);
 
   if (error) {
-    return new Response(JSON.stringify({ error: error.message }), { status: 500 });
+    return new Response(JSON.stringify({ error: error.message }), {
+      status: 500,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
   }
 
   let best: (typeof employees)[number] | null = null;
@@ -110,7 +132,7 @@ Deno.serve(async (req) => {
     });
     return new Response(
       JSON.stringify({ granted: false, reason: "Rosto não reconhecido", employee: null }),
-      { headers: { "Content-Type": "application/json" } }
+      { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }
 
@@ -143,6 +165,6 @@ Deno.serve(async (req) => {
       employee: { id: best.id, name: best.name, companyName },
       turnstile,
     }),
-    { headers: { "Content-Type": "application/json" } }
+    { headers: { ...corsHeaders, "Content-Type": "application/json" } }
   );
 });
