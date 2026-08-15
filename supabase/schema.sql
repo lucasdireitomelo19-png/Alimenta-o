@@ -213,6 +213,8 @@ drop policy if exists "anon full access - credentials" on credentials;
 create policy "anon full access - credentials" on credentials for all using (true) with check (true);
 drop policy if exists "anon read audit_log" on audit_log;
 create policy "anon read audit_log" on audit_log for select using (true);
+drop policy if exists "anon insert audit_log" on audit_log;
+create policy "anon insert audit_log" on audit_log for insert with check (true);
 
 -- app_users é a exceção: cada usuário só enxerga o próprio perfil, já nascendo mais travado
 drop policy if exists "self read app_users" on app_users;
