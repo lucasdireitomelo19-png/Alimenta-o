@@ -12,6 +12,8 @@ export default function Kiosk() {
   const [scanning, setScanning] = useState(true);
   const [result, setResult] = useState<CheckinResult | null>(null);
   const [logs, setLogs] = useState<AccessLog[]>([]);
+  const [attempts, setAttempts] = useState(0);
+  const [lastError, setLastError] = useState<string | null>(null);
   const busyRef = useRef(false);
 
   useEffect(() => {
@@ -30,15 +32,20 @@ export default function Kiosk() {
       busyRef.current = true;
       try {
         const detected = await detectDescriptor(videoRef.current);
+        setAttempts((n) => n + 1);
         if (detected) {
           setScanning(false);
           const res = await api.checkin(detected.descriptor);
           setResult(res);
+          setLastError(null);
           setTimeout(() => {
             setResult(null);
             setScanning(true);
           }, RESULT_DISPLAY_MS);
         }
+      } catch (err) {
+        setLastError(err instanceof Error ? err.message : String(err));
+        setScanning(true);
       } finally {
         busyRef.current = false;
       }
@@ -74,6 +81,10 @@ export default function Kiosk() {
             </div>
           )}
         </div>
+        <p className="hint" style={{ marginTop: "0.6rem" }}>
+          modelo: {modelsReady ? "carregado" : "carregando…"} · câmera: {ready ? "pronta" : "iniciando…"} · tentativas de leitura: {attempts}
+          {lastError && <span className="hint-warn"> · erro: {lastError}</span>}
+        </p>
       </div>
 
       <aside className="kiosk-log">
