@@ -182,25 +182,38 @@ alter table credentials enable row level security;
 alter table app_users enable row level security;
 alter table audit_log enable row level security;
 
+-- drop policy if exists antes de cada create: torna esse arquivo seguro pra rodar
+-- de novo em um banco que já existe, sem travar em "policy already exists".
+drop policy if exists "anon full access - companies" on companies;
 create policy "anon full access - companies" on companies
   for all using (true) with check (true);
 
+drop policy if exists "anon full access - employees" on employees;
 create policy "anon full access - employees" on employees
   for all using (true) with check (true);
 
+drop policy if exists "anon full access - access_rules" on access_rules;
 create policy "anon full access - access_rules" on access_rules
   for all using (true) with check (true);
 
 -- access_logs: só a edge function (service role) escreve; leitura liberada pro painel ver o histórico
+drop policy if exists "anon read logs" on access_logs;
 create policy "anon read logs" on access_logs
   for select using (true);
 
+drop policy if exists "anon full access - sectors" on sectors;
 create policy "anon full access - sectors" on sectors for all using (true) with check (true);
+drop policy if exists "anon full access - job_functions" on job_functions;
 create policy "anon full access - job_functions" on job_functions for all using (true) with check (true);
+drop policy if exists "anon full access - access_gates" on access_gates;
 create policy "anon full access - access_gates" on access_gates for all using (true) with check (true);
+drop policy if exists "anon full access - visitors" on visitors;
 create policy "anon full access - visitors" on visitors for all using (true) with check (true);
+drop policy if exists "anon full access - credentials" on credentials;
 create policy "anon full access - credentials" on credentials for all using (true) with check (true);
+drop policy if exists "anon read audit_log" on audit_log;
 create policy "anon read audit_log" on audit_log for select using (true);
 
 -- app_users é a exceção: cada usuário só enxerga o próprio perfil, já nascendo mais travado
+drop policy if exists "self read app_users" on app_users;
 create policy "self read app_users" on app_users for select using (auth.uid() = id);

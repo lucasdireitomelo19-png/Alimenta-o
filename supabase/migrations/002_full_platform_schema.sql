@@ -119,12 +119,21 @@ alter table credentials enable row level security;
 alter table app_users enable row level security;
 alter table audit_log enable row level security;
 
+-- drop policy if exists antes de cada create: torna essa migração segura pra rodar
+-- de novo (ex.: se travou no meio) sem bater em "policy already exists".
+drop policy if exists "anon full access - sectors" on sectors;
 create policy "anon full access - sectors" on sectors for all using (true) with check (true);
+drop policy if exists "anon full access - job_functions" on job_functions;
 create policy "anon full access - job_functions" on job_functions for all using (true) with check (true);
+drop policy if exists "anon full access - access_gates" on access_gates;
 create policy "anon full access - access_gates" on access_gates for all using (true) with check (true);
+drop policy if exists "anon full access - visitors" on visitors;
 create policy "anon full access - visitors" on visitors for all using (true) with check (true);
+drop policy if exists "anon full access - credentials" on credentials;
 create policy "anon full access - credentials" on credentials for all using (true) with check (true);
+drop policy if exists "anon read audit_log" on audit_log;
 create policy "anon read audit_log" on audit_log for select using (true);
 
 -- app_users é a exceção: cada usuário só enxerga o próprio perfil, já nascendo mais travado
+drop policy if exists "self read app_users" on app_users;
 create policy "self read app_users" on app_users for select using (auth.uid() = id);
