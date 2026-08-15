@@ -153,8 +153,8 @@ input[type="time"] { width: 110px; }
 .meal-toggle { display: flex; align-items: center; gap: 0.4rem; min-width: 150px; }
 
 /* ---------- kiosk ---------- */
-.kiosk { display: flex; gap: 1.5rem; padding: 1.5rem; max-width: 1100px; margin: 0 auto; }
-.kiosk-main { flex: 1; }
+.kiosk { display: flex; gap: 1.5rem; padding: 1.5rem; max-width: 1400px; margin: 0 auto; }
+.kiosk-main { flex: 1; min-width: 0; }
 .kiosk-frame {
   position: relative;
   border-radius: 10px;
@@ -162,27 +162,33 @@ input[type="time"] { width: 110px; }
   border: 4px solid var(--border);
   transition: border-color 0.3s ease;
   background: #111;
+  aspect-ratio: 4 / 3;
 }
 .kiosk-frame.granted { border-color: var(--ok); }
 .kiosk-frame.denied { border-color: var(--fail); }
-.kiosk-video { width: 100%; display: block; }
+.kiosk-video { width: 100%; height: 100%; display: block; object-fit: cover; }
+.kiosk-flip {
+  position: absolute; top: 0.8rem; right: 0.8rem; z-index: 2;
+  background: rgba(0,0,0,0.5); color: #fff; border-color: rgba(255,255,255,0.4);
+}
 .kiosk-overlay {
   position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
-  color: #fff; background: rgba(0,0,0,0.4); font-size: 1rem;
+  color: #fff; background: rgba(0,0,0,0.4); font-size: 1.2rem;
 }
-.kiosk-overlay.subtle { background: rgba(0,0,0,0.15); bottom: auto; top: auto; align-items: flex-end; padding-bottom: 1rem; }
+.kiosk-overlay.subtle { background: rgba(0,0,0,0.15); bottom: auto; top: auto; align-items: flex-end; padding-bottom: 1.2rem; }
 .kiosk-result {
   position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center;
-  background: rgba(20,25,26,0.88); color: #fff; text-align: center; gap: 0.3rem;
+  background: rgba(20,25,26,0.88); color: #fff; text-align: center; gap: 0.4rem;
 }
-.kiosk-icon { font-size: 3.5rem; line-height: 1; }
+.kiosk-icon { font-size: 5rem; line-height: 1; }
 .kiosk-icon.ok { color: var(--ok); }
 .kiosk-icon.fail { color: var(--fail); }
-.kiosk-name { font-size: 1.4rem; font-weight: 700; }
-.kiosk-sub { opacity: 0.8; }
-.kiosk-meal { margin-top: 0.4rem; color: var(--coral); font-weight: 600; }
+.kiosk-granted { font-size: 2rem; font-weight: 800; color: var(--ok); }
+.kiosk-name { font-size: 1.7rem; font-weight: 700; }
+.kiosk-sub { opacity: 0.8; font-size: 1.1rem; }
+.kiosk-meal { margin-top: 0.4rem; color: var(--coral); font-weight: 600; font-size: 1.1rem; }
 
-.kiosk-log { width: 260px; background: #fff; border: 1px solid var(--border); border-radius: 6px; padding: 1rem; }
+.kiosk-log { width: 260px; flex-shrink: 0; background: #fff; border: 1px solid var(--border); border-radius: 6px; padding: 1rem; }
 .kiosk-log h3 { margin-top: 0; font-size: 0.95rem; }
 .kiosk-log ul { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 0.5rem; }
 .kiosk-log li { font-size: 0.8rem; display: flex; flex-direction: column; border-left: 3px solid var(--border); padding-left: 0.5rem; }

@@ -7,7 +7,7 @@ const SCAN_INTERVAL_MS = 1200;
 const RESULT_DISPLAY_MS = 3000;
 
 export default function Kiosk() {
-  const { videoRef, ready } = useCamera();
+  const { videoRef, ready, facing, toggleFacing } = useCamera();
   const [modelsReady, setModelsReady] = useState(false);
   const [scanning, setScanning] = useState(true);
   const [result, setResult] = useState<CheckinResult | null>(null);
@@ -58,6 +58,9 @@ export default function Kiosk() {
       <div className="kiosk-main">
         <div className={`kiosk-frame ${result ? (result.granted ? "granted" : "denied") : ""}`}>
           <video ref={videoRef} autoPlay muted playsInline className="kiosk-video" />
+          <button type="button" className="btn btn-ghost kiosk-flip" onClick={toggleFacing} title="Trocar câmera">
+            ⟲ {facing === "user" ? "Frontal" : "Traseira"}
+          </button>
           {!modelsReady && <div className="kiosk-overlay">Carregando reconhecimento facial…</div>}
           {modelsReady && scanning && !result && (
             <div className="kiosk-overlay subtle">Posicione o rosto na câmera</div>
@@ -67,9 +70,10 @@ export default function Kiosk() {
               {result.granted ? (
                 <>
                   <div className="kiosk-icon ok">✓</div>
+                  <div className="kiosk-granted">Entrada liberada</div>
                   <div className="kiosk-name">{result.employee?.name}</div>
                   <div className="kiosk-sub">{result.employee?.companyName}</div>
-                  <div className="kiosk-meal">{result.mealType} — passagem liberada</div>
+                  <div className="kiosk-meal">{result.mealType}</div>
                 </>
               ) : (
                 <>
